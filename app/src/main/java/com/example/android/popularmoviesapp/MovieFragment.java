@@ -86,20 +86,21 @@ public class MovieFragment extends Fragment {
             final String TMDB_RELEASE_DATE = "release_date";
             final String TMDB_TITLE = "original_title";
             final String TMDB_USER_RATING = "vote_average";
+            final String TMDB_POSTER_BASE_URL = "http://image.tmdb.org/t/p/";
+            final String TMDB_POSTER_WIDTH = "w185";
 
             JSONObject moviesJson = new JSONObject(moviesJsonStr);
             JSONArray moviesList = moviesJson.getJSONArray(TMDB_MOVIE_LIST);
 
             ArrayList<MovieCard> movieCards = new ArrayList<MovieCard>();
-            String title;
-            String releaseDate;
-            float rating;
 
             for (int i = 0; i < moviesList.length(); i++) {
-                title = moviesList.getJSONObject(i).getString(TMDB_TITLE);
-                releaseDate = moviesList.getJSONObject(i).getString(TMDB_RELEASE_DATE);
-                rating = Float.parseFloat(moviesList.getJSONObject(i).getString(TMDB_USER_RATING));
-                movieCards.add(new MovieCard(title, releaseDate, rating));
+                movieCards.add(new MovieCard(
+                                moviesList.getJSONObject(i).getString(TMDB_TITLE),
+                                moviesList.getJSONObject(i).getString(TMDB_RELEASE_DATE),
+                                Float.parseFloat(moviesList.getJSONObject(i).getString(TMDB_USER_RATING)),
+                                TMDB_POSTER_BASE_URL + TMDB_POSTER_WIDTH + moviesList.getJSONObject(i).getString(TMDB_POSTER_PATH))
+                );
             }
             return movieCards;
         }
