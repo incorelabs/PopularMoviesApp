@@ -5,7 +5,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 
@@ -16,6 +19,7 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
     private static class ViewHolder {
         TextView movieTitle;
         TextView movieRating;
+        ImageView moviePoster;
     }
 
     /**
@@ -32,6 +36,8 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
         // Because this is a custom adapter for two TextViews and an ImageView, the adapter is not
         // going to use this second argument, so it can be any value. Here, we used 0.
         super(context, R.layout.list_movie_item, movieCards);
+        Picasso.with(getContext()).setIndicatorsEnabled(true);
+        Picasso.with(getContext()).setLoggingEnabled(true);
     }
 
     /**
@@ -61,6 +67,7 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
             convertView = inflater.inflate(R.layout.list_movie_item, parent, false);
             viewHolder.movieTitle = (TextView) convertView.findViewById(R.id.movie_title);
             viewHolder.movieRating = (TextView) convertView.findViewById(R.id.movie_rating);
+            viewHolder.moviePoster = (ImageView) convertView.findViewById(R.id.movie_poster);
             convertView.setTag(viewHolder);
 
             /*convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_movie_item, parent, false);*/
@@ -71,6 +78,8 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
         // Populate the data into the template view using the data object
         viewHolder.movieTitle.setText(movieCard.movieTitle);
         viewHolder.movieRating.setText(Float.toString(movieCard.movieRating));
+
+        Picasso.with(getContext()).load(movieCard.moviePosterUrl).into(viewHolder.moviePoster);
 
         /*TextView movieTitleView = (TextView) convertView.findViewById(R.id.movie_title);
         movieTitleView.setText(movieCard.movieTitle);
