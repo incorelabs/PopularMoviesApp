@@ -69,8 +69,6 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
             viewHolder.movieRating = (TextView) convertView.findViewById(R.id.movie_rating);
             viewHolder.moviePoster = (ImageView) convertView.findViewById(R.id.movie_poster);
             convertView.setTag(viewHolder);
-
-            /*convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_movie_item, parent, false);*/
         } else {
             viewHolder = (ViewHolder) convertView.getTag();
         }
@@ -80,12 +78,6 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
         viewHolder.movieRating.setText(Float.toString(movieCard.movieRating));
 
         Picasso.with(getContext()).load(movieCard.moviePosterUrl).into(viewHolder.moviePoster);
-
-        /*TextView movieTitleView = (TextView) convertView.findViewById(R.id.movie_title);
-        movieTitleView.setText(movieCard.movieTitle);
-
-        TextView movieRatingView = (TextView) convertView.findViewById(R.id.movie_rating);
-        movieRatingView.setText(Float.toString(movieCard.movieRating));*/
 
         // Return the completed view to render on screen
         return convertView;

@@ -1,5 +1,6 @@
 package com.example.android.popularmoviesapp;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -11,6 +12,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ListView;
 
 import org.json.JSONArray;
@@ -29,6 +31,8 @@ import java.util.ArrayList;
  * A placeholder fragment containing a simple view.
  */
 public class MovieFragment extends Fragment {
+    private final String LOG_TAG = MovieFragment.class.getSimpleName();
+
     private MovieListAdapter movieListAdapter;
 
     public MovieFragment() {
@@ -53,8 +57,7 @@ public class MovieFragment extends Fragment {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.action_refresh) {
-            FetchMoviesTask moviesTask = new FetchMoviesTask();
-            moviesTask.execute();
+            updateMoviesList();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -64,20 +67,57 @@ public class MovieFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        ArrayList<MovieCard> moviesList = new ArrayList<MovieCard>();
+        final ArrayList<MovieCard> moviesList = new ArrayList<MovieCard>();
 
         movieListAdapter = new MovieListAdapter(getActivity(), moviesList);
 
         ListView listView = (ListView) rootView.findViewById(R.id.listview_movie);
         listView.setAdapter(movieListAdapter);
 
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                // The getItem method returns a MovieCard type of Object.
+                Intent intent = new Intent(getActivity(), DetailActivity.class);
+                try {
+                    String getJsonData = parseToJson(movieListAdapter.getItem(position));
+                    intent.putExtra(Intent.EXTRA_TEXT, getJsonData);
+                } catch (JSONException e) {
+                    Log.e("MovieFragmentError", e.toString());
+                    e.printStackTrace();
+                }
+                startActivity(intent);
+            }
+        });
+
         return rootView;
     }
 
-    public class FetchMoviesTask extends AsyncTask<Void, Void, ArrayList<MovieCard>> {
-        ArrayList<MovieCard> moviesList = new ArrayList<>();
+    @Override
+    public void onStart() {
+        super.onStart();
+        updateMoviesList();
+    }
 
+    private void updateMoviesList() {
+        FetchMoviesTask moviesTask = new FetchMoviesTask();
+        moviesTask.execute();
+    }
+
+    public String parseToJson(MovieCard movieCard) throws JSONException {
+        JSONObject movieJsonObject = new JSONObject();
+        movieJsonObject.put("movieTitle", movieCard.movieTitle);
+        movieJsonObject.put("movieReleaseDate", movieCard.movieReleaseDate);
+        movieJsonObject.put("moviePosterUrl", movieCard.moviePosterUrl);
+        movieJsonObject.put("movieOverview", movieCard.movieOverview);
+        movieJsonObject.put("movieRating", movieCard.movieRating);
+        return movieJsonObject.toString();
+    }
+
+    public class FetchMoviesTask extends AsyncTask<Void, Void, ArrayList<MovieCard>> {
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
+
+        ArrayList<MovieCard> moviesList = new ArrayList<>();
 
         private ArrayList<MovieCard> getMovieDataFromJson(String moviesJsonStr) throws JSONException {
             final String TMDB_MOVIE_LIST = "results";
@@ -98,8 +138,9 @@ public class MovieFragment extends Fragment {
                 movieCards.add(new MovieCard(
                                 moviesList.getJSONObject(i).getString(TMDB_TITLE),
                                 moviesList.getJSONObject(i).getString(TMDB_RELEASE_DATE),
-                                Float.parseFloat(moviesList.getJSONObject(i).getString(TMDB_USER_RATING)),
-                                TMDB_POSTER_BASE_URL + TMDB_POSTER_WIDTH + moviesList.getJSONObject(i).getString(TMDB_POSTER_PATH))
+                                TMDB_POSTER_BASE_URL + TMDB_POSTER_WIDTH + moviesList.getJSONObject(i).getString(TMDB_POSTER_PATH),
+                                moviesList.getJSONObject(i).getString(TMDB_OVERVIEW),
+                                Float.parseFloat(moviesList.getJSONObject(i).getString(TMDB_USER_RATING)))
                 );
             }
             return movieCards;
