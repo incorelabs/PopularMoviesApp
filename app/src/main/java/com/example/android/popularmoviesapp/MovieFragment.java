@@ -34,6 +34,7 @@ public class MovieFragment extends Fragment {
     private final String LOG_TAG = MovieFragment.class.getSimpleName();
 
     private MovieListAdapter movieListAdapter;
+    private ArrayList<MovieCard> savedMoviesList;
 
     public MovieFragment() {
     }
@@ -41,6 +42,10 @@ public class MovieFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null && savedInstanceState.containsKey("savedMoviesList")) {
+            savedMoviesList = savedInstanceState.getParcelableArrayList("savedMoviesList");
+        }
+
         // Add this line in order for this fragment to handle menu events.
         setHasOptionsMenu(true);
     }
@@ -67,7 +72,13 @@ public class MovieFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        final ArrayList<MovieCard> moviesList = new ArrayList<MovieCard>();
+        final ArrayList<MovieCard> moviesList;
+
+        if (savedInstanceState != null && savedInstanceState.containsKey("savedMoviesList")) {
+            moviesList = savedInstanceState.getParcelableArrayList("savedMoviesList");
+        } else {
+            moviesList = new ArrayList<MovieCard>();
+        }
 
         movieListAdapter = new MovieListAdapter(getActivity(), moviesList);
 
@@ -79,13 +90,7 @@ public class MovieFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 // The getItem method returns a MovieCard type of Object.
                 Intent intent = new Intent(getActivity(), DetailActivity.class);
-                try {
-                    String getJsonData = parseToJson(movieListAdapter.getItem(position));
-                    intent.putExtra(Intent.EXTRA_TEXT, getJsonData);
-                } catch (JSONException e) {
-                    Log.e("MovieFragmentError", e.toString());
-                    e.printStackTrace();
-                }
+                intent.putExtra(Intent.EXTRA_TEXT, movieListAdapter.getItem(position));
                 startActivity(intent);
             }
         });
@@ -96,7 +101,15 @@ public class MovieFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-        updateMoviesList();
+        if (savedMoviesList == null) {
+            updateMoviesList();
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        outState.putParcelableArrayList("savedMoviesList", savedMoviesList);
+        super.onSaveInstanceState(outState);
     }
 
     private void updateMoviesList() {
@@ -104,20 +117,8 @@ public class MovieFragment extends Fragment {
         moviesTask.execute();
     }
 
-    public String parseToJson(MovieCard movieCard) throws JSONException {
-        JSONObject movieJsonObject = new JSONObject();
-        movieJsonObject.put("movieTitle", movieCard.movieTitle);
-        movieJsonObject.put("movieReleaseDate", movieCard.movieReleaseDate);
-        movieJsonObject.put("moviePosterUrl", movieCard.moviePosterUrl);
-        movieJsonObject.put("movieOverview", movieCard.movieOverview);
-        movieJsonObject.put("movieRating", movieCard.movieRating);
-        return movieJsonObject.toString();
-    }
-
     public class FetchMoviesTask extends AsyncTask<Void, Void, ArrayList<MovieCard>> {
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
-
-        ArrayList<MovieCard> moviesList = new ArrayList<>();
 
         private ArrayList<MovieCard> getMovieDataFromJson(String moviesJsonStr) throws JSONException {
             final String TMDB_MOVIE_LIST = "results";
@@ -247,6 +248,7 @@ public class MovieFragment extends Fragment {
         @Override
         protected void onPostExecute(ArrayList<MovieCard> movieCards) {
             if (movieCards != null) {
+                savedMoviesList = new ArrayList<MovieCard>(movieCards);
                 movieListAdapter.clear();
                 movieListAdapter.addAll(movieCards);
             }
