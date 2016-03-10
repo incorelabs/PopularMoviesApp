@@ -65,9 +65,9 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
             viewHolder = new ViewHolder();
             LayoutInflater inflater = LayoutInflater.from(getContext());
             convertView = inflater.inflate(R.layout.list_movie_item, parent, false);
-            viewHolder.movieTitle = (TextView) convertView.findViewById(R.id.movie_title);
-            viewHolder.movieRating = (TextView) convertView.findViewById(R.id.movie_rating);
-            viewHolder.moviePoster = (ImageView) convertView.findViewById(R.id.movie_poster);
+            viewHolder.movieTitle = (TextView) convertView.findViewById(R.id.list_movie_title);
+            viewHolder.movieRating = (TextView) convertView.findViewById(R.id.list_movie_rating);
+            viewHolder.moviePoster = (ImageView) convertView.findViewById(R.id.list_movie_poster);
             convertView.setTag(viewHolder);
         } else {
             viewHolder = (ViewHolder) convertView.getTag();
