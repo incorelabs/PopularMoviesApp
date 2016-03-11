@@ -13,7 +13,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ListView;
+import android.widget.GridView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -82,10 +82,11 @@ public class MovieFragment extends Fragment {
 
         movieListAdapter = new MovieListAdapter(getActivity(), moviesList);
 
-        ListView listView = (ListView) rootView.findViewById(R.id.listview_movie);
-        listView.setAdapter(movieListAdapter);
+        GridView gridView = (GridView) rootView.findViewById(R.id.gridview_movie);
+        gridView.setAdapter(movieListAdapter);
+        gridView.setDrawSelectorOnTop(true);
 
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 // The getItem method returns a MovieCard type of Object.

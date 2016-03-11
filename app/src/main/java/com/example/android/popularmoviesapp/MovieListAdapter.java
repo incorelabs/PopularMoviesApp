@@ -19,6 +19,7 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
     private static class ViewHolder {
         TextView movieTitle;
         TextView movieRating;
+        TextView movieReleaseYear;
         ImageView moviePoster;
     }
 
@@ -36,8 +37,6 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
         // Because this is a custom adapter for two TextViews and an ImageView, the adapter is not
         // going to use this second argument, so it can be any value. Here, we used 0.
         super(context, R.layout.list_movie_item, movieCards);
-        Picasso.with(getContext()).setIndicatorsEnabled(true);
-        Picasso.with(getContext()).setLoggingEnabled(true);
     }
 
     /**
@@ -67,6 +66,7 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
             convertView = inflater.inflate(R.layout.list_movie_item, parent, false);
             viewHolder.movieTitle = (TextView) convertView.findViewById(R.id.list_movie_title);
             viewHolder.movieRating = (TextView) convertView.findViewById(R.id.list_movie_rating);
+            viewHolder.movieReleaseYear = (TextView) convertView.findViewById(R.id.list_movie_year);
             viewHolder.moviePoster = (ImageView) convertView.findViewById(R.id.list_movie_poster);
             convertView.setTag(viewHolder);
         } else {
@@ -76,6 +76,7 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
         // Populate the data into the template view using the data object
         viewHolder.movieTitle.setText(movieCard.movieTitle);
         viewHolder.movieRating.setText(Float.toString(movieCard.movieRating));
+        viewHolder.movieReleaseYear.setText(movieCard.movieReleaseDate.split("-")[0]);
 
         Picasso.with(getContext()).load(movieCard.moviePosterUrl).into(viewHolder.moviePoster);
 
