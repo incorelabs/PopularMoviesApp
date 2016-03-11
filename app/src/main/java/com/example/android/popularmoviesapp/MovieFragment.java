@@ -33,8 +33,8 @@ import java.util.ArrayList;
 public class MovieFragment extends Fragment {
     private final String LOG_TAG = MovieFragment.class.getSimpleName();
 
-    private MovieListAdapter movieListAdapter;
-    private ArrayList<MovieCard> savedMoviesList;
+    private static MovieListAdapter movieListAdapter;
+    private static ArrayList<MovieCard> savedMoviesList;
 
     public MovieFragment() {
     }
@@ -60,11 +60,6 @@ public class MovieFragment extends Fragment {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.action_refresh) {
-            updateMoviesList();
-            return true;
-        }
         return super.onOptionsItemSelected(item);
     }
 
@@ -103,7 +98,7 @@ public class MovieFragment extends Fragment {
     public void onStart() {
         super.onStart();
         if (savedMoviesList == null) {
-            updateMoviesList();
+            updateMoviesList(0);
         }
     }
 
@@ -113,12 +108,12 @@ public class MovieFragment extends Fragment {
         super.onSaveInstanceState(outState);
     }
 
-    private void updateMoviesList() {
+    public static void updateMoviesList(int sortOrder) {
         FetchMoviesTask moviesTask = new FetchMoviesTask();
-        moviesTask.execute();
+        moviesTask.execute(sortOrder);
     }
 
-    public class FetchMoviesTask extends AsyncTask<Void, Void, ArrayList<MovieCard>> {
+    public static class FetchMoviesTask extends AsyncTask<Integer, Void, ArrayList<MovieCard>> {
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
         private ArrayList<MovieCard> getMovieDataFromJson(String moviesJsonStr) throws JSONException {
@@ -149,7 +144,7 @@ public class MovieFragment extends Fragment {
         }
 
         @Override
-        protected ArrayList<MovieCard> doInBackground(Void... params) {
+        protected ArrayList<MovieCard> doInBackground(Integer... params) {
 
             // These two need to be declared outside the try/catch
             // so that they can be closed in the finally block.
@@ -159,19 +154,16 @@ public class MovieFragment extends Fragment {
             // Will contain the raw JSON response as a string.
             String moviesJsonStr = null;
 
-            String sortOrder = "popularity.desc"; // vote_average.desc
-
             try {
                 // This is the url for v3 of The Movie DB API
                 final String URL_PROTOCOL = "http";
                 final String URL_HOSTNAME = "api.themoviedb.org";
                 final String API_VERSION = "3";
-                final String DISCOVER_PATH = "discover";
                 final String MOVIE_PATH = "movie";
-                final String SORT_PARAM = "sort_by";
+                final String SORT_PARAM = params[0] == 0 ? "popular" : "top_rated";
                 final String API_KEY = "api_key";
 
-                /* URL -> http://api.themoviedb.org/3/discover/movie?sort_by=popularity.desc */
+                /* URL -> http://api.themoviedb.org/3/movie/popular */
 
                 /* URL -> http://api.themoviedb.org/3/movie/top_rated */
 
@@ -179,9 +171,8 @@ public class MovieFragment extends Fragment {
                 tmdbUri.scheme(URL_PROTOCOL)
                         .authority(URL_HOSTNAME)
                         .appendPath(API_VERSION)
-                        .appendPath(DISCOVER_PATH)
                         .appendPath(MOVIE_PATH)
-                        .appendQueryParameter(SORT_PARAM, sortOrder)
+                        .appendPath(SORT_PARAM)
                         .appendQueryParameter(API_KEY, BuildConfig.THE_MOVIE_DB_API_KEY);
 
                 URL urlFromUri = new URL(tmdbUri.build().toString());
