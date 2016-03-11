@@ -5,7 +5,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 
@@ -16,6 +19,8 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
     private static class ViewHolder {
         TextView movieTitle;
         TextView movieRating;
+        TextView movieReleaseYear;
+        ImageView moviePoster;
     }
 
     /**
@@ -59,11 +64,11 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
             viewHolder = new ViewHolder();
             LayoutInflater inflater = LayoutInflater.from(getContext());
             convertView = inflater.inflate(R.layout.list_movie_item, parent, false);
-            viewHolder.movieTitle = (TextView) convertView.findViewById(R.id.movie_title);
-            viewHolder.movieRating = (TextView) convertView.findViewById(R.id.movie_rating);
+            viewHolder.movieTitle = (TextView) convertView.findViewById(R.id.list_movie_title);
+            viewHolder.movieRating = (TextView) convertView.findViewById(R.id.list_movie_rating);
+            viewHolder.movieReleaseYear = (TextView) convertView.findViewById(R.id.list_movie_year);
+            viewHolder.moviePoster = (ImageView) convertView.findViewById(R.id.list_movie_poster);
             convertView.setTag(viewHolder);
-
-            /*convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_movie_item, parent, false);*/
         } else {
             viewHolder = (ViewHolder) convertView.getTag();
         }
@@ -71,12 +76,9 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
         // Populate the data into the template view using the data object
         viewHolder.movieTitle.setText(movieCard.movieTitle);
         viewHolder.movieRating.setText(Float.toString(movieCard.movieRating));
+        viewHolder.movieReleaseYear.setText(movieCard.movieReleaseDate.split("-")[0]);
 
-        /*TextView movieTitleView = (TextView) convertView.findViewById(R.id.movie_title);
-        movieTitleView.setText(movieCard.movieTitle);
-
-        TextView movieRatingView = (TextView) convertView.findViewById(R.id.movie_rating);
-        movieRatingView.setText(Float.toString(movieCard.movieRating));*/
+        Picasso.with(getContext()).load(movieCard.moviePosterUrl).into(viewHolder.moviePoster);
 
         // Return the completed view to render on screen
         return convertView;

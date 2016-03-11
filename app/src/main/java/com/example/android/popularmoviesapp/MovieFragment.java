@@ -1,5 +1,6 @@
 package com.example.android.popularmoviesapp;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -11,7 +12,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ListView;
+import android.widget.AdapterView;
+import android.widget.GridView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -29,7 +31,10 @@ import java.util.ArrayList;
  * A placeholder fragment containing a simple view.
  */
 public class MovieFragment extends Fragment {
-    private MovieListAdapter movieListAdapter;
+    private final String LOG_TAG = MovieFragment.class.getSimpleName();
+
+    private static MovieListAdapter movieListAdapter;
+    private static ArrayList<MovieCard> savedMoviesList;
 
     public MovieFragment() {
     }
@@ -37,6 +42,10 @@ public class MovieFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null && savedInstanceState.containsKey("savedMoviesList")) {
+            savedMoviesList = savedInstanceState.getParcelableArrayList("savedMoviesList");
+        }
+
         // Add this line in order for this fragment to handle menu events.
         setHasOptionsMenu(true);
     }
@@ -51,12 +60,6 @@ public class MovieFragment extends Fragment {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.action_refresh) {
-            FetchMoviesTask moviesTask = new FetchMoviesTask();
-            moviesTask.execute();
-            return true;
-        }
         return super.onOptionsItemSelected(item);
     }
 
@@ -64,19 +67,53 @@ public class MovieFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        ArrayList<MovieCard> moviesList = new ArrayList<MovieCard>();
+        final ArrayList<MovieCard> moviesList;
+
+        if (savedInstanceState != null && savedInstanceState.containsKey("savedMoviesList")) {
+            moviesList = savedInstanceState.getParcelableArrayList("savedMoviesList");
+        } else {
+            moviesList = new ArrayList<MovieCard>();
+        }
 
         movieListAdapter = new MovieListAdapter(getActivity(), moviesList);
 
-        ListView listView = (ListView) rootView.findViewById(R.id.listview_movie);
-        listView.setAdapter(movieListAdapter);
+        GridView gridView = (GridView) rootView.findViewById(R.id.gridview_movie);
+        gridView.setAdapter(movieListAdapter);
+        gridView.setDrawSelectorOnTop(true);
+
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                // The getItem method returns a MovieCard type of Object.
+                Intent intent = new Intent(getActivity(), DetailActivity.class);
+                intent.putExtra(Intent.EXTRA_TEXT, movieListAdapter.getItem(position));
+                startActivity(intent);
+            }
+        });
 
         return rootView;
     }
 
-    public class FetchMoviesTask extends AsyncTask<Void, Void, ArrayList<MovieCard>> {
-        ArrayList<MovieCard> moviesList = new ArrayList<>();
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (savedMoviesList == null) {
+            updateMoviesList(0);
+        }
+    }
 
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        outState.putParcelableArrayList("savedMoviesList", savedMoviesList);
+        super.onSaveInstanceState(outState);
+    }
+
+    public static void updateMoviesList(int sortOrder) {
+        FetchMoviesTask moviesTask = new FetchMoviesTask();
+        moviesTask.execute(sortOrder);
+    }
+
+    public static class FetchMoviesTask extends AsyncTask<Integer, Void, ArrayList<MovieCard>> {
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
         private ArrayList<MovieCard> getMovieDataFromJson(String moviesJsonStr) throws JSONException {
@@ -86,26 +123,28 @@ public class MovieFragment extends Fragment {
             final String TMDB_RELEASE_DATE = "release_date";
             final String TMDB_TITLE = "original_title";
             final String TMDB_USER_RATING = "vote_average";
+            final String TMDB_POSTER_BASE_URL = "http://image.tmdb.org/t/p/";
+            final String TMDB_POSTER_WIDTH = "w185";
 
             JSONObject moviesJson = new JSONObject(moviesJsonStr);
             JSONArray moviesList = moviesJson.getJSONArray(TMDB_MOVIE_LIST);
 
             ArrayList<MovieCard> movieCards = new ArrayList<MovieCard>();
-            String title;
-            String releaseDate;
-            float rating;
 
             for (int i = 0; i < moviesList.length(); i++) {
-                title = moviesList.getJSONObject(i).getString(TMDB_TITLE);
-                releaseDate = moviesList.getJSONObject(i).getString(TMDB_RELEASE_DATE);
-                rating = Float.parseFloat(moviesList.getJSONObject(i).getString(TMDB_USER_RATING));
-                movieCards.add(new MovieCard(title, releaseDate, rating));
+                movieCards.add(new MovieCard(
+                                moviesList.getJSONObject(i).getString(TMDB_TITLE),
+                                moviesList.getJSONObject(i).getString(TMDB_RELEASE_DATE),
+                                TMDB_POSTER_BASE_URL + TMDB_POSTER_WIDTH + moviesList.getJSONObject(i).getString(TMDB_POSTER_PATH),
+                                moviesList.getJSONObject(i).getString(TMDB_OVERVIEW),
+                                Float.parseFloat(moviesList.getJSONObject(i).getString(TMDB_USER_RATING)))
+                );
             }
             return movieCards;
         }
 
         @Override
-        protected ArrayList<MovieCard> doInBackground(Void... params) {
+        protected ArrayList<MovieCard> doInBackground(Integer... params) {
 
             // These two need to be declared outside the try/catch
             // so that they can be closed in the finally block.
@@ -115,19 +154,16 @@ public class MovieFragment extends Fragment {
             // Will contain the raw JSON response as a string.
             String moviesJsonStr = null;
 
-            String sortOrder = "popularity.desc"; // vote_average.desc
-
             try {
                 // This is the url for v3 of The Movie DB API
                 final String URL_PROTOCOL = "http";
                 final String URL_HOSTNAME = "api.themoviedb.org";
                 final String API_VERSION = "3";
-                final String DISCOVER_PATH = "discover";
                 final String MOVIE_PATH = "movie";
-                final String SORT_PARAM = "sort_by";
+                final String SORT_PARAM = params[0] == 0 ? "popular" : "top_rated";
                 final String API_KEY = "api_key";
 
-                /* URL -> http://api.themoviedb.org/3/discover/movie?sort_by=popularity.desc */
+                /* URL -> http://api.themoviedb.org/3/movie/popular */
 
                 /* URL -> http://api.themoviedb.org/3/movie/top_rated */
 
@@ -135,9 +171,8 @@ public class MovieFragment extends Fragment {
                 tmdbUri.scheme(URL_PROTOCOL)
                         .authority(URL_HOSTNAME)
                         .appendPath(API_VERSION)
-                        .appendPath(DISCOVER_PATH)
                         .appendPath(MOVIE_PATH)
-                        .appendQueryParameter(SORT_PARAM, sortOrder)
+                        .appendPath(SORT_PARAM)
                         .appendQueryParameter(API_KEY, BuildConfig.THE_MOVIE_DB_API_KEY);
 
                 URL urlFromUri = new URL(tmdbUri.build().toString());
@@ -205,6 +240,7 @@ public class MovieFragment extends Fragment {
         @Override
         protected void onPostExecute(ArrayList<MovieCard> movieCards) {
             if (movieCards != null) {
+                savedMoviesList = new ArrayList<MovieCard>(movieCards);
                 movieListAdapter.clear();
                 movieListAdapter.addAll(movieCards);
             }
