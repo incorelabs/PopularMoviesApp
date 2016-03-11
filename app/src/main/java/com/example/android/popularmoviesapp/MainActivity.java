@@ -1,12 +1,19 @@
 package com.example.android.popularmoviesapp;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
 public class MainActivity extends AppCompatActivity {
+    private int mSelectedOrder;
+    private AlertDialog mSortDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -15,14 +22,44 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        /*FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });*/
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        final CharSequence[] sortBy = {"Popularity", "Top Rated"};
+
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+
+        mSelectedOrder = 0;
+
+        if (fab != null) {
+            fab.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(final View view) {
+                    builder.setTitle("Sort By");
+                    builder.setSingleChoiceItems(sortBy, mSelectedOrder, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            switch (which) {
+                                case 0:
+                                    mSelectedOrder = 0;
+                                    mSortDialog.dismiss();
+                                    MovieFragment.updateMoviesList(0);
+                                    Snackbar.make(view, "Updating list with Most Popular Movies", Snackbar.LENGTH_LONG)
+                                            .show();
+                                    break;
+                                case 1:
+                                    mSelectedOrder = 1;
+                                    mSortDialog.dismiss();
+                                    MovieFragment.updateMoviesList(1);
+                                    Snackbar.make(view, "Updating list with Top Rated Movies", Snackbar.LENGTH_LONG)
+                                            .show();
+                                    break;
+                            }
+                        }
+                    });
+                    mSortDialog = builder.create();
+                    mSortDialog.show();
+                }
+            });
+        }
     }
 
     @Override
@@ -40,7 +77,8 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_refresh) {
+            MovieFragment.updateMoviesList(mSelectedOrder);
             return true;
         }
 
