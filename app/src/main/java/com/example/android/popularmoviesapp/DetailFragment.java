@@ -29,6 +29,8 @@ public class DetailFragment extends Fragment {
             movieCard = intent.getParcelableExtra(Intent.EXTRA_TEXT);
             Picasso.with(getContext()).load(movieCard.moviePosterUrl).into((ImageView) rootView.findViewById(R.id.detail_movie_poster));
             ((TextView) rootView.findViewById(R.id.detail_text)).setText(movieCard.movieTitle);
+            ((TextView) rootView.findViewById(R.id.detail_rating)).setText(Float.toString(movieCard.movieRating));
+            ((TextView) rootView.findViewById(R.id.detail_release_date)).setText(movieCard.movieReleaseDate);
             ((TextView) rootView.findViewById(R.id.detail_movie_overview)).setText(movieCard.movieOverview);
         }
         return rootView;
