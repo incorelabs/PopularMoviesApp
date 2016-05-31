@@ -37,18 +37,19 @@ public class MainActivity extends AppCompatActivity {
                     builder.setSingleChoiceItems(sortBy, mSelectedOrder, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
+                            MovieFragment movieFragment = new MovieFragment();
                             switch (which) {
                                 case 0:
                                     mSelectedOrder = 0;
                                     mSortDialog.dismiss();
-                                    MovieFragment.updateMoviesList(0);
+                                    movieFragment.updateMoviesList(0);
                                     Snackbar.make(view, "Updating list with Most Popular Movies", Snackbar.LENGTH_LONG)
                                             .show();
                                     break;
                                 case 1:
                                     mSelectedOrder = 1;
                                     mSortDialog.dismiss();
-                                    MovieFragment.updateMoviesList(1);
+                                    movieFragment.updateMoviesList(1);
                                     Snackbar.make(view, "Updating list with Top Rated Movies", Snackbar.LENGTH_LONG)
                                             .show();
                                     break;
@@ -78,7 +79,9 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_refresh) {
-            MovieFragment.updateMoviesList(mSelectedOrder);
+            MovieFragment movieFragment = new MovieFragment();
+            if (mSelectedOrder == 0 || mSelectedOrder == 1)
+                movieFragment.updateMoviesList(mSelectedOrder);
             return true;
         }
 
