@@ -18,6 +18,7 @@ import java.net.URL;
 import java.util.ArrayList;
 
 public class FetchMoviesTask extends AsyncTask<Integer, Void, ArrayList<MovieCard>> {
+
     private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
     private final Context mContext;
@@ -122,6 +123,7 @@ public class FetchMoviesTask extends AsyncTask<Integer, Void, ArrayList<MovieCar
             Log.e(LOG_TAG, "Error ", e);
             // If the code didn't successfully get the weather data, there's no point in attemping
             // to parse it.
+            return null;
         } finally {
             if (urlConnection != null) {
                 urlConnection.disconnect();

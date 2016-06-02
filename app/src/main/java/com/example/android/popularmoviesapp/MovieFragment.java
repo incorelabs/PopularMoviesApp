@@ -2,6 +2,7 @@ package com.example.android.popularmoviesapp;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -18,10 +19,23 @@ import java.util.ArrayList;
  * A placeholder fragment containing a simple view.
  */
 public class MovieFragment extends Fragment {
+
     private final String LOG_TAG = MovieFragment.class.getSimpleName();
 
     protected static MovieListAdapter movieListAdapter;
     protected static ArrayList<MovieCard> savedMoviesList;
+
+    /**
+     * A callback interface that all activities containing this fragment must
+     * implement. This mechanism allows activities to be notified of item
+     * selections.
+     */
+    public interface Callback {
+        /**
+         * DetailFragmentCallback for when an item has been selected.
+         */
+        public void onItemSelected(String intentType, Parcelable movieData);
+    }
 
     public MovieFragment() {
     }
@@ -72,9 +86,8 @@ public class MovieFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 // The getItem method returns a MovieCard type of Object.
-                Intent intent = new Intent(getActivity(), DetailActivity.class);
-                intent.putExtra(Intent.EXTRA_TEXT, movieListAdapter.getItem(position));
-                startActivity(intent);
+                ((Callback) getActivity())
+                        .onItemSelected(Intent.EXTRA_TEXT, movieListAdapter.getItem(position));
             }
         });
 
