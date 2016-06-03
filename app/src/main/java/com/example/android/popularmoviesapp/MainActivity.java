@@ -2,6 +2,7 @@ package com.example.android.popularmoviesapp;
 
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.design.widget.FloatingActionButton;
@@ -11,6 +12,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+
+import com.example.android.popularmoviesapp.data.MovieContract;
+import com.facebook.stetho.Stetho;
 
 public class MainActivity extends AppCompatActivity implements MovieFragment.Callback {
 
@@ -43,6 +47,14 @@ public class MainActivity extends AppCompatActivity implements MovieFragment.Cal
         } else {
             mTwoPane = false;
         }
+
+        Stetho.initialize(
+                Stetho.newInitializerBuilder(this)
+                        .enableDumpapp(
+                                Stetho.defaultDumperPluginsProvider(this))
+                        .enableWebKitInspector(
+                                Stetho.defaultInspectorModulesProvider(this))
+                        .build());
 
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
         final CharSequence[] sortBy = {"Popularity", "Top Rated"};
@@ -115,6 +127,21 @@ public class MainActivity extends AppCompatActivity implements MovieFragment.Cal
         // In two-pane mode, show the detail view in this activity by
         // adding or replacing the detail fragment using a
         // fragment transaction.
+
+        Cursor cursor = getContentResolver().query(
+                MovieContract.FavouriteMoviesEntry.buildMovieData(((MovieCard) movieData).movieId),
+                null,
+                null,
+                null,
+                null
+        );
+
+        if (cursor.moveToFirst()) {
+            ((MovieCard) movieData).isFavourite = 1;
+        } else {
+            ((MovieCard) movieData).isFavourite = 0;
+        }
+
         if (mTwoPane) {
             Bundle args = new Bundle();
             args.putParcelable(DetailFragment.DETAIL_PARCEL, movieData);
@@ -130,6 +157,5 @@ public class MainActivity extends AppCompatActivity implements MovieFragment.Cal
             intent.putExtra(intentType, movieData);
             startActivity(intent);
         }
-
     }
 }

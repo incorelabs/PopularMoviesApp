@@ -1,6 +1,7 @@
 package com.example.android.popularmoviesapp;
 
 import android.content.ActivityNotFoundException;
+import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -15,6 +16,7 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.example.android.popularmoviesapp.data.MovieContract.FavouriteMoviesEntry;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
@@ -62,6 +64,25 @@ public class DetailFragment extends Fragment {
 
             ((ImageView) rootView.findViewById(R.id.detail_icon_date)).setImageResource(R.drawable.ic_date_range_black_18dp);
             ((TextView) rootView.findViewById(R.id.detail_release_date)).setText(movieCard.movieReleaseDate);
+
+            final ImageView favourite_btn = (ImageView) rootView.findViewById(R.id.favourite_btn);
+            if (movieCard.isFavourite == 1) {
+                favourite_btn.setImageResource(android.R.drawable.btn_star_big_on);
+            } else {
+                favourite_btn.setImageResource(android.R.drawable.btn_star_big_off);
+            }
+            favourite_btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (movieCard.isFavourite == 1) {
+                        removeFromFavourites();
+                        favourite_btn.setImageResource(android.R.drawable.btn_star_big_off);
+                    } else {
+                        addToFavourites();
+                        favourite_btn.setImageResource(android.R.drawable.btn_star_big_on);
+                    }
+                }
+            });
 
             ((TextView) rootView.findViewById(R.id.plot_label)).setText(R.string.label_overview);
 
@@ -133,5 +154,30 @@ public class DetailFragment extends Fragment {
         sendIntent.setType("text/plain");
         sendIntent.putExtra(Intent.EXTRA_TEXT, sharedContent);
         startActivity(sendIntent);
+    }
+
+    private void addToFavourites() {
+        ContentValues movieCardValues = new ContentValues();
+
+        movieCardValues.put(FavouriteMoviesEntry.COLUMN_MOVIE_ID, movieCard.movieId);
+        movieCardValues.put(FavouriteMoviesEntry.COLUMN_TITLE, movieCard.movieTitle);
+        movieCardValues.put(FavouriteMoviesEntry.COLUMN_POSTER, movieCard.moviePosterUrl);
+        movieCardValues.put(FavouriteMoviesEntry.COLUMN_SYNOPSIS, movieCard.movieOverview);
+        movieCardValues.put(FavouriteMoviesEntry.COLUMN_USER_RATING, movieCard.movieRating);
+        movieCardValues.put(FavouriteMoviesEntry.COLUMN_RELEASE_DATE, movieCard.movieReleaseDate);
+
+        Uri insertedUri = getContext().getContentResolver()
+                .insert(FavouriteMoviesEntry.CONTENT_URI, movieCardValues);
+
+        if (insertedUri != null)
+            movieCard.isFavourite = 1;
+    }
+
+    public void removeFromFavourites() {
+        int rowsDeleted = getContext().getContentResolver()
+                .delete(FavouriteMoviesEntry.CONTENT_URI, FavouriteMoviesEntry.COLUMN_MOVIE_ID + " = ?", new String[]{Integer.toString(movieCard.movieId)});
+
+        if (rowsDeleted > 0)
+            movieCard.isFavourite = 0;
     }
 }

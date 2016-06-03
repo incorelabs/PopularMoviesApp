@@ -72,6 +72,8 @@ public class MovieFragment extends Fragment {
 
         if (savedInstanceState != null && savedInstanceState.containsKey("savedMoviesList")) {
             moviesList = savedInstanceState.getParcelableArrayList("savedMoviesList");
+        } else if (savedMoviesList != null && savedMoviesList.size() > 0) {
+            moviesList = savedMoviesList;
         } else {
             moviesList = new ArrayList<MovieCard>();
         }

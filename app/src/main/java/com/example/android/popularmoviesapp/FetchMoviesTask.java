@@ -47,6 +47,7 @@ public class FetchMoviesTask extends AsyncTask<Integer, Void, ArrayList<MovieCar
             movieCards.add(
                     new MovieCard(
                             moviesList.getJSONObject(i).getInt(TMDB_MOVIE_ID),
+                            (byte) 0,
                             moviesList.getJSONObject(i).getString(TMDB_TITLE),
                             moviesList.getJSONObject(i).getString(TMDB_RELEASE_DATE),
                             TMDB_POSTER_BASE_URL + TMDB_POSTER_WIDTH + moviesList.getJSONObject(i).getString(TMDB_POSTER_PATH),
