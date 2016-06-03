@@ -1,14 +1,23 @@
 package com.example.android.popularmoviesapp;
 
+import android.content.ActivityNotFoundException;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
+
+import java.util.ArrayList;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -17,6 +26,11 @@ public class DetailFragment extends Fragment {
 
     private static final String LOG_TAG = DetailFragment.class.getSimpleName();
     protected static final String DETAIL_PARCEL = "PARCEL";
+
+    protected static TrailerListAdapter trailerListAdapter;
+    protected static ReviewListAdapter reviewListAdapter;
+
+    private AlertDialog mTrailerActionDialog;
 
     MovieCard movieCard;
 
@@ -32,16 +46,92 @@ public class DetailFragment extends Fragment {
             movieCard = arguments.getParcelable(DetailFragment.DETAIL_PARCEL);
         }
 
-        View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+        final View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+
+        ArrayList<TrailerCard> trailersList = new ArrayList<TrailerCard>();
+
+        ArrayList<ReviewCard> reviewsList = new ArrayList<ReviewCard>();
 
         if (movieCard != null) {
             Picasso.with(getContext()).load(movieCard.moviePosterUrl).into((ImageView) rootView.findViewById(R.id.detail_movie_poster));
+
             ((TextView) rootView.findViewById(R.id.detail_text)).setText(movieCard.movieTitle);
+
+            ((ImageView) rootView.findViewById(R.id.detail_icon_rating)).setImageResource(R.drawable.ic_whatshot_black_18dp);
             ((TextView) rootView.findViewById(R.id.detail_rating)).setText(Float.toString(movieCard.movieRating));
+
+            ((ImageView) rootView.findViewById(R.id.detail_icon_date)).setImageResource(R.drawable.ic_date_range_black_18dp);
             ((TextView) rootView.findViewById(R.id.detail_release_date)).setText(movieCard.movieReleaseDate);
+
+            ((TextView) rootView.findViewById(R.id.plot_label)).setText(R.string.label_overview);
+
             ((TextView) rootView.findViewById(R.id.detail_movie_overview)).setText(movieCard.movieOverview);
+
+            FetchTrailersTask fetchTrailersTask = new FetchTrailersTask(getActivity(), rootView);
+            fetchTrailersTask.execute(movieCard.movieId);
+
+            trailerListAdapter = new TrailerListAdapter(getActivity(), trailersList);
+            ListView trailersListView = (ListView) rootView.findViewById(R.id.trailers_list_view);
+            trailersListView.setAdapter(trailerListAdapter);
+
+            final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            final CharSequence[] trailerActions = {"Watch", "Share"};
+
+            trailersListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
+                    final String trailerTitle = trailerListAdapter.getItem(position).trailerTitle;
+                    final String trailerKey = trailerListAdapter.getItem(position).trailerKey;
+
+                    builder.setTitle(trailerTitle);
+                    builder.setSingleChoiceItems(trailerActions, -1, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            switch (which) {
+                                case 0:
+                                    mTrailerActionDialog.dismiss();
+                                    // Launch Intent to open youtube app.
+                                    watchYoutubeVideo(trailerKey);
+                                    break;
+                                case 1:
+                                    mTrailerActionDialog.dismiss();
+                                    // Launch Intent to share the trailer.
+                                    shareIntent("Check this Trailer for the Movie: " + movieCard.movieTitle
+                                            + ". \n" + "Link: http://www.youtube.com/watch?v=" + trailerKey);
+                                    break;
+                            }
+                        }
+                    });
+                    mTrailerActionDialog = builder.create();
+                    mTrailerActionDialog.show();
+                }
+            });
+
+            FetchReviewsTask fetchReviewsTask = new FetchReviewsTask(getActivity(), rootView);
+            fetchReviewsTask.execute(movieCard.movieId);
+
+            reviewListAdapter = new ReviewListAdapter(getActivity(), reviewsList);
+            ListView reviewsListView = (ListView) rootView.findViewById(R.id.reviews_list_view);
+            reviewsListView.setAdapter(reviewListAdapter);
         }
 
         return rootView;
+    }
+
+    public void watchYoutubeVideo(String trailerKey) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:" + trailerKey));
+            startActivity(intent);
+        } catch (ActivityNotFoundException ex) {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.youtube.com/watch?v=" + trailerKey));
+            startActivity(intent);
+        }
+    }
+
+    public void shareIntent(String sharedContent) {
+        Intent sendIntent = new Intent(Intent.ACTION_SEND);
+        sendIntent.setType("text/plain");
+        sendIntent.putExtra(Intent.EXTRA_TEXT, sharedContent);
+        startActivity(sendIntent);
     }
 }
