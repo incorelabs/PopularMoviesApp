@@ -148,8 +148,8 @@ public class FetchReviewsTask extends AsyncTask<Integer, Void, ArrayList<ReviewC
     @Override
     protected void onPostExecute(ArrayList<ReviewCard> reviewCards) {
         if (reviewCards != null && reviewCards.size() > 0) {
-            DetailFragment.reviewListAdapter.clear();
-            DetailFragment.reviewListAdapter.addAll(reviewCards);
+            DetailFragment.mReviewListAdapter.clear();
+            DetailFragment.mReviewListAdapter.addAll(reviewCards);
         }
     }
 }

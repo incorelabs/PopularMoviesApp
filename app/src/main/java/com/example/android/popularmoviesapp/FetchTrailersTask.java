@@ -151,8 +151,8 @@ public class FetchTrailersTask extends AsyncTask<Integer, Void, ArrayList<Traile
     @Override
     protected void onPostExecute(ArrayList<TrailerCard> trailerCards) {
         if (trailerCards != null && trailerCards.size() > 0) {
-            DetailFragment.trailerListAdapter.clear();
-            DetailFragment.trailerListAdapter.addAll(trailerCards);
+            DetailFragment.mTrailerListAdapter.clear();
+            DetailFragment.mTrailerListAdapter.addAll(trailerCards);
         }
     }
 }

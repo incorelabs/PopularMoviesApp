@@ -19,11 +19,13 @@ import com.facebook.stetho.Stetho;
 public class MainActivity extends AppCompatActivity implements MovieFragment.Callback {
 
     private final String LOG_TAG = MainActivity.class.getSimpleName();
-    private static final String DETAILFRAGMENT_TAG = "DFTAG";
+
+    protected static final String DETAILFRAGMENT_TAG = "DFTAG";
 
     private boolean mTwoPane;
-    private int mSelectedOrder;
+    private static int mSelectedOrder = -1;
     private AlertDialog mSortDialog;
+    private static String mOutStateOrderKey = "selectedOrder";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,11 +59,15 @@ public class MainActivity extends AppCompatActivity implements MovieFragment.Cal
                         .build());
 
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        final CharSequence[] sortBy = {"Popularity", "Top Rated"};
+        final CharSequence[] sortBy = {"Popularity", "Top Rated", "Favourites"};
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
 
-        mSelectedOrder = 0;
+        if (savedInstanceState != null && savedInstanceState.containsKey(mOutStateOrderKey)) {
+            mSelectedOrder = savedInstanceState.getInt(mOutStateOrderKey);
+        } else if (mSelectedOrder == -1) {
+            mSelectedOrder = 0;
+        }
 
         if (fab != null) {
             fab.setOnClickListener(new View.OnClickListener() {
@@ -76,15 +82,22 @@ public class MainActivity extends AppCompatActivity implements MovieFragment.Cal
                                 case 0:
                                     mSelectedOrder = 0;
                                     mSortDialog.dismiss();
-                                    movieFragment.updateMoviesList(0);
+                                    movieFragment.switchGridViewAdapter(view.getContext(), false, 0);
                                     Snackbar.make(view, "Updating list with Most Popular Movies", Snackbar.LENGTH_LONG)
                                             .show();
                                     break;
                                 case 1:
                                     mSelectedOrder = 1;
                                     mSortDialog.dismiss();
-                                    movieFragment.updateMoviesList(1);
+                                    movieFragment.switchGridViewAdapter(view.getContext(), false, 1);
                                     Snackbar.make(view, "Updating list with Top Rated Movies", Snackbar.LENGTH_LONG)
+                                            .show();
+                                    break;
+                                case 2:
+                                    mSelectedOrder = 2;
+                                    mSortDialog.dismiss();
+                                    movieFragment.switchGridViewAdapter(view.getContext(), true, 2);
+                                    Snackbar.make(view, "Updating list with Favourite Movies", Snackbar.LENGTH_LONG)
                                             .show();
                                     break;
                             }
@@ -120,6 +133,12 @@ public class MainActivity extends AppCompatActivity implements MovieFragment.Cal
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putInt(mOutStateOrderKey, mSelectedOrder);
+        super.onSaveInstanceState(outState);
     }
 
     @Override

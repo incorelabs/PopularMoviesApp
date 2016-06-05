@@ -29,8 +29,8 @@ public class DetailFragment extends Fragment {
     private static final String LOG_TAG = DetailFragment.class.getSimpleName();
     protected static final String DETAIL_PARCEL = "PARCEL";
 
-    protected static TrailerListAdapter trailerListAdapter;
-    protected static ReviewListAdapter reviewListAdapter;
+    protected static TrailerListAdapter mTrailerListAdapter;
+    protected static ReviewListAdapter mReviewListAdapter;
 
     private AlertDialog mTrailerActionDialog;
 
@@ -41,7 +41,6 @@ public class DetailFragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-
         Bundle arguments = getArguments();
 
         if (arguments != null) {
@@ -55,7 +54,10 @@ public class DetailFragment extends Fragment {
         ArrayList<ReviewCard> reviewsList = new ArrayList<ReviewCard>();
 
         if (movieCard != null) {
-            Picasso.with(getContext()).load(movieCard.moviePosterUrl).into((ImageView) rootView.findViewById(R.id.detail_movie_poster));
+            Picasso.with(getContext())
+                    .load(movieCard.moviePosterUrl)
+                    .placeholder(android.R.drawable.sym_def_app_icon)
+                    .into((ImageView) rootView.findViewById(R.id.detail_movie_poster));
 
             ((TextView) rootView.findViewById(R.id.detail_text)).setText(movieCard.movieTitle);
 
@@ -91,9 +93,9 @@ public class DetailFragment extends Fragment {
             FetchTrailersTask fetchTrailersTask = new FetchTrailersTask(getActivity(), rootView);
             fetchTrailersTask.execute(movieCard.movieId);
 
-            trailerListAdapter = new TrailerListAdapter(getActivity(), trailersList);
+            mTrailerListAdapter = new TrailerListAdapter(getActivity(), trailersList);
             ListView trailersListView = (ListView) rootView.findViewById(R.id.trailers_list_view);
-            trailersListView.setAdapter(trailerListAdapter);
+            trailersListView.setAdapter(mTrailerListAdapter);
 
             final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
             final CharSequence[] trailerActions = {"Watch", "Share"};
@@ -101,8 +103,8 @@ public class DetailFragment extends Fragment {
             trailersListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
-                    final String trailerTitle = trailerListAdapter.getItem(position).trailerTitle;
-                    final String trailerKey = trailerListAdapter.getItem(position).trailerKey;
+                    final String trailerTitle = mTrailerListAdapter.getItem(position).trailerTitle;
+                    final String trailerKey = mTrailerListAdapter.getItem(position).trailerKey;
 
                     builder.setTitle(trailerTitle);
                     builder.setSingleChoiceItems(trailerActions, -1, new DialogInterface.OnClickListener() {
@@ -131,9 +133,9 @@ public class DetailFragment extends Fragment {
             FetchReviewsTask fetchReviewsTask = new FetchReviewsTask(getActivity(), rootView);
             fetchReviewsTask.execute(movieCard.movieId);
 
-            reviewListAdapter = new ReviewListAdapter(getActivity(), reviewsList);
+            mReviewListAdapter = new ReviewListAdapter(getActivity(), reviewsList);
             ListView reviewsListView = (ListView) rootView.findViewById(R.id.reviews_list_view);
-            reviewsListView.setAdapter(reviewListAdapter);
+            reviewsListView.setAdapter(mReviewListAdapter);
         }
 
         return rootView;

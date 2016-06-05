@@ -1,6 +1,9 @@
 package com.example.android.popularmoviesapp;
 
+import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.v4.app.Fragment;
@@ -13,6 +16,8 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.GridView;
 
+import com.example.android.popularmoviesapp.data.MovieContract;
+
 import java.util.ArrayList;
 
 /**
@@ -22,8 +27,12 @@ public class MovieFragment extends Fragment {
 
     private final String LOG_TAG = MovieFragment.class.getSimpleName();
 
-    protected static MovieListAdapter movieListAdapter;
-    protected static ArrayList<MovieCard> savedMoviesList;
+    protected static MovieListAdapter mMovieListAdapter;
+    protected static GridView mGridView;
+    protected static TransferData savedMoviesList;
+
+    private static String mOutStateMovieListKey = "savedMoviesList";
+    private static String mOutStateAdapterKey = "savedMoviesAdapter";
 
     /**
      * A callback interface that all activities containing this fragment must
@@ -43,9 +52,6 @@ public class MovieFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (savedInstanceState != null && savedInstanceState.containsKey("savedMoviesList")) {
-            savedMoviesList = savedInstanceState.getParcelableArrayList("savedMoviesList");
-        }
 
         // Add this line in order for this fragment to handle menu events.
         setHasOptionsMenu(true);
@@ -68,30 +74,44 @@ public class MovieFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        final ArrayList<MovieCard> moviesList;
+        ArrayList<MovieCard> moviesList = null;
 
-        if (savedInstanceState != null && savedInstanceState.containsKey("savedMoviesList")) {
-            moviesList = savedInstanceState.getParcelableArrayList("savedMoviesList");
-        } else if (savedMoviesList != null && savedMoviesList.size() > 0) {
-            moviesList = savedMoviesList;
+        boolean isArrayAdapter = false;
+
+        if (savedInstanceState != null && savedInstanceState.containsKey(mOutStateMovieListKey)) {
+            if (savedInstanceState.getInt(mOutStateAdapterKey) == TransferData.ARRAY_ADAPTER_TYPE) {
+                moviesList = savedInstanceState.getParcelableArrayList(mOutStateMovieListKey);
+                isArrayAdapter = true;
+            }
+        } else if (savedMoviesList != null && savedMoviesList.adapterType == TransferData.ARRAY_ADAPTER_TYPE) {
+            ArrayList<MovieCard> moviesListFromObject = (ArrayList<MovieCard>) savedMoviesList.savedMoviesList;
+            if (moviesListFromObject != null && moviesListFromObject.size() > 0) {
+                moviesList = moviesListFromObject;
+            } else {
+                moviesList = new ArrayList<MovieCard>();
+            }
+            isArrayAdapter = true;
         } else {
             moviesList = new ArrayList<MovieCard>();
+            isArrayAdapter = true;
         }
 
-        movieListAdapter = new MovieListAdapter(getActivity(), moviesList);
+        mGridView = (GridView) rootView.findViewById(R.id.gridview_movie);
+        mGridView.setDrawSelectorOnTop(true);
 
-        GridView gridView = (GridView) rootView.findViewById(R.id.gridview_movie);
-        gridView.setAdapter(movieListAdapter);
-        gridView.setDrawSelectorOnTop(true);
+        if (isArrayAdapter) {
+            mMovieListAdapter = new MovieListAdapter(getActivity(), moviesList);
 
-        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // The getItem method returns a MovieCard type of Object.
-                ((Callback) getActivity())
-                        .onItemSelected(Intent.EXTRA_TEXT, movieListAdapter.getItem(position));
-            }
-        });
+            mGridView.setAdapter(mMovieListAdapter);
+            mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    // The getItem method returns a MovieCard type of Object.
+                    ((Callback) getActivity())
+                            .onItemSelected(Intent.EXTRA_TEXT, mMovieListAdapter.getItem(position));
+                }
+            });
+        }
 
         return rootView;
     }
@@ -101,17 +121,129 @@ public class MovieFragment extends Fragment {
         super.onStart();
         if (savedMoviesList == null) {
             updateMoviesList(0);
+        } else if (savedMoviesList != null && savedMoviesList.adapterType == TransferData.CURSOR_ADAPTER_TYPE) {
+            Cursor cursor = getContext().getContentResolver().query(
+                    (Uri) savedMoviesList.savedMoviesList,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+
+            FavouriteMovieCursorAdapter favouriteMovieCursorAdapter = new FavouriteMovieCursorAdapter(getContext(), cursor, 0);
+            mGridView.setAdapter(favouriteMovieCursorAdapter);
+            mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    Cursor cursor = (Cursor) parent.getItemAtPosition(position);
+
+                    MovieCard movieCard = null;
+                    if (cursor != null) {
+                        movieCard = cursorToMovieCard(cursor);
+                    }
+
+                    ((Callback) getContext())
+                            .onItemSelected(Intent.EXTRA_TEXT, movieCard);
+                }
+            });
         }
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        outState.putParcelableArrayList("savedMoviesList", savedMoviesList);
+        if (savedMoviesList != null) {
+            if (savedMoviesList.adapterType == TransferData.ARRAY_ADAPTER_TYPE) {
+                outState.putParcelableArrayList(mOutStateMovieListKey, (ArrayList<MovieCard>) savedMoviesList.savedMoviesList);
+            } else {
+                outState.putParcelable(mOutStateMovieListKey, (Uri) savedMoviesList.savedMoviesList);
+            }
+            outState.putInt(mOutStateAdapterKey, savedMoviesList.adapterType);
+        }
+
         super.onSaveInstanceState(outState);
     }
 
     public void updateMoviesList(int sortOrder) {
         FetchMoviesTask moviesTask = new FetchMoviesTask(getActivity());
         moviesTask.execute(sortOrder);
+    }
+
+    public void switchGridViewAdapter(final Context context, boolean isCursorAdapter, int sortOrder) {
+        if (isCursorAdapter) {
+            Uri favouriteMoviesUri = MovieContract.FavouriteMoviesEntry.buildFavouriteMoviesCollection();
+
+            Cursor cursor = context.getContentResolver().query(
+                    favouriteMoviesUri,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+
+            FavouriteMovieCursorAdapter favouriteMovieCursorAdapter = new FavouriteMovieCursorAdapter(context, cursor, 0);
+            mGridView.setAdapter(favouriteMovieCursorAdapter);
+            mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    Cursor cursor = (Cursor) parent.getItemAtPosition(position);
+
+                    MovieCard movieCard = null;
+                    if (cursor != null) {
+                        movieCard = cursorToMovieCard(cursor);
+                    }
+
+                    ((Callback) context)
+                            .onItemSelected(Intent.EXTRA_TEXT, movieCard);
+                }
+            });
+
+            savedMoviesList = new TransferData(favouriteMoviesUri, TransferData.CURSOR_ADAPTER_TYPE);
+        } else {
+            mMovieListAdapter.clear();
+            mGridView.setAdapter(mMovieListAdapter);
+            mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    // The getItem method returns a MovieCard type of Object.
+                    ((Callback) context)
+                            .onItemSelected(Intent.EXTRA_TEXT, mMovieListAdapter.getItem(position));
+                }
+            });
+            updateMoviesList(sortOrder);
+        }
+    }
+
+    private MovieCard cursorToMovieCard(Cursor cursor) {
+        int movieId = cursor.getInt(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_MOVIE_ID)
+        );
+
+        byte isFavourite = 1;
+
+        String movieTitle = cursor.getString(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_TITLE)
+        );
+
+        String movieReleaseDate = cursor.getString(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_RELEASE_DATE)
+        );
+
+        String moviePosterUrl = cursor.getString(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_POSTER)
+        );
+
+        String movieOverview = cursor.getString(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_SYNOPSIS)
+        );
+
+        float movieRating = cursor.getFloat(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_USER_RATING)
+        );
+
+        MovieCard movieCard = new MovieCard(
+                movieId, isFavourite, movieTitle, movieReleaseDate, moviePosterUrl, movieOverview, movieRating
+        );
+
+        return movieCard;
     }
 }

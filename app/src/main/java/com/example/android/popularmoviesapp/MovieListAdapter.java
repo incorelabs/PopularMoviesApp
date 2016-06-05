@@ -78,7 +78,10 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
         viewHolder.movieRating.setText(Float.toString(movieCard.movieRating));
         viewHolder.movieReleaseYear.setText(movieCard.movieReleaseDate.split("-")[0]);
 
-        Picasso.with(getContext()).load(movieCard.moviePosterUrl).into(viewHolder.moviePoster);
+        Picasso.with(getContext())
+                .load(movieCard.moviePosterUrl)
+                .placeholder(android.R.drawable.sym_def_app_icon)
+                .into(viewHolder.moviePoster);
 
         // Return the completed view to render on screen
         return convertView;

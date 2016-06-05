@@ -157,9 +157,9 @@ public class FetchMoviesTask extends AsyncTask<Integer, Void, ArrayList<MovieCar
     @Override
     protected void onPostExecute(ArrayList<MovieCard> movieCards) {
         if (movieCards != null) {
-            MovieFragment.savedMoviesList = new ArrayList<MovieCard>(movieCards);
-            MovieFragment.movieListAdapter.clear();
-            MovieFragment.movieListAdapter.addAll(movieCards);
+            MovieFragment.savedMoviesList = new TransferData(movieCards, TransferData.ARRAY_ADAPTER_TYPE);
+            MovieFragment.mMovieListAdapter.clear();
+            MovieFragment.mMovieListAdapter.addAll(movieCards);
         }
     }
 }
