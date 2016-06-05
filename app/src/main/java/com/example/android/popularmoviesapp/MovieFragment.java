@@ -1,11 +1,12 @@
 package com.example.android.popularmoviesapp;
 
+import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -14,27 +15,38 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.GridView;
+import android.widget.TextView;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.example.android.popularmoviesapp.data.MovieContract;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 
 /**
  * A placeholder fragment containing a simple view.
  */
 public class MovieFragment extends Fragment {
+
     private final String LOG_TAG = MovieFragment.class.getSimpleName();
 
-    private static MovieListAdapter movieListAdapter;
-    private static ArrayList<MovieCard> savedMoviesList;
+    protected static MovieListAdapter mMovieListAdapter;
+    protected static GridView mGridView;
+    protected static TransferData savedMoviesList;
+    protected static TextView mNoMoviesTextView;
+
+    private static String mOutStateMovieListKey = "savedMoviesList";
+    private static String mOutStateAdapterKey = "savedMoviesAdapter";
+
+    /**
+     * A callback interface that all activities containing this fragment must
+     * implement. This mechanism allows activities to be notified of item
+     * selections.
+     */
+    public interface Callback {
+        /**
+         * DetailFragmentCallback for when an item has been selected.
+         */
+        public void onItemSelected(String intentType, Parcelable movieData);
+    }
 
     public MovieFragment() {
     }
@@ -42,9 +54,6 @@ public class MovieFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (savedInstanceState != null && savedInstanceState.containsKey("savedMoviesList")) {
-            savedMoviesList = savedInstanceState.getParcelableArrayList("savedMoviesList");
-        }
 
         // Add this line in order for this fragment to handle menu events.
         setHasOptionsMenu(true);
@@ -67,29 +76,54 @@ public class MovieFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        final ArrayList<MovieCard> moviesList;
+        ArrayList<MovieCard> moviesList = null;
 
-        if (savedInstanceState != null && savedInstanceState.containsKey("savedMoviesList")) {
-            moviesList = savedInstanceState.getParcelableArrayList("savedMoviesList");
+        boolean isArrayAdapter = false;
+
+        if (savedInstanceState != null && savedInstanceState.containsKey(mOutStateMovieListKey)) {
+            if (savedInstanceState.getInt(mOutStateAdapterKey) == TransferData.ARRAY_ADAPTER_TYPE) {
+                moviesList = savedInstanceState.getParcelableArrayList(mOutStateMovieListKey);
+                isArrayAdapter = true;
+            }
+        } else if (savedMoviesList != null && savedMoviesList.adapterType == TransferData.ARRAY_ADAPTER_TYPE) {
+            ArrayList<MovieCard> moviesListFromObject = (ArrayList<MovieCard>) savedMoviesList.savedMoviesList;
+            if (moviesListFromObject != null && moviesListFromObject.size() > 0) {
+                moviesList = moviesListFromObject;
+            } else {
+                moviesList = new ArrayList<MovieCard>();
+            }
+            isArrayAdapter = true;
         } else {
             moviesList = new ArrayList<MovieCard>();
+            isArrayAdapter = true;
         }
 
-        movieListAdapter = new MovieListAdapter(getActivity(), moviesList);
+        mNoMoviesTextView = (TextView) rootView.findViewById(R.id.no_movie_textview);
 
-        GridView gridView = (GridView) rootView.findViewById(R.id.gridview_movie);
-        gridView.setAdapter(movieListAdapter);
-        gridView.setDrawSelectorOnTop(true);
+        mGridView = (GridView) rootView.findViewById(R.id.gridview_movie);
+        mGridView.setDrawSelectorOnTop(true);
 
-        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // The getItem method returns a MovieCard type of Object.
-                Intent intent = new Intent(getActivity(), DetailActivity.class);
-                intent.putExtra(Intent.EXTRA_TEXT, movieListAdapter.getItem(position));
-                startActivity(intent);
+        if (isArrayAdapter) {
+            if (moviesList.size() > 0) {
+                mNoMoviesTextView.setText("");
+                mNoMoviesTextView.setVisibility(View.GONE);
+            } else {
+                mNoMoviesTextView.setVisibility(View.VISIBLE);
+                mNoMoviesTextView.setText(R.string.no_movie);
             }
-        });
+
+            mMovieListAdapter = new MovieListAdapter(getActivity(), moviesList);
+
+            mGridView.setAdapter(mMovieListAdapter);
+            mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    // The getItem method returns a MovieCard type of Object.
+                    ((Callback) getActivity())
+                            .onItemSelected(Intent.EXTRA_TEXT, mMovieListAdapter.getItem(position));
+                }
+            });
+        }
 
         return rootView;
     }
@@ -99,151 +133,116 @@ public class MovieFragment extends Fragment {
         super.onStart();
         if (savedMoviesList == null) {
             updateMoviesList(0);
+        } else if (savedMoviesList != null && savedMoviesList.adapterType == TransferData.CURSOR_ADAPTER_TYPE) {
+            cursorGridView(getContext(), (Uri) savedMoviesList.savedMoviesList);
         }
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        outState.putParcelableArrayList("savedMoviesList", savedMoviesList);
+        if (savedMoviesList != null) {
+            if (savedMoviesList.adapterType == TransferData.ARRAY_ADAPTER_TYPE) {
+                outState.putParcelableArrayList(mOutStateMovieListKey, (ArrayList<MovieCard>) savedMoviesList.savedMoviesList);
+            } else {
+                outState.putParcelable(mOutStateMovieListKey, (Uri) savedMoviesList.savedMoviesList);
+            }
+            outState.putInt(mOutStateAdapterKey, savedMoviesList.adapterType);
+        }
+
         super.onSaveInstanceState(outState);
     }
 
-    public static void updateMoviesList(int sortOrder) {
-        FetchMoviesTask moviesTask = new FetchMoviesTask();
+    public void updateMoviesList(int sortOrder) {
+        FetchMoviesTask moviesTask = new FetchMoviesTask(getActivity());
         moviesTask.execute(sortOrder);
     }
 
-    public static class FetchMoviesTask extends AsyncTask<Integer, Void, ArrayList<MovieCard>> {
-        private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
+    public void switchGridViewAdapter(final Context context, boolean isCursorAdapter, int sortOrder) {
+        if (isCursorAdapter) {
+            Uri favouriteMoviesUri = MovieContract.FavouriteMoviesEntry.buildFavouriteMoviesCollection();
+            cursorGridView(context, favouriteMoviesUri);
+            savedMoviesList = new TransferData(favouriteMoviesUri, TransferData.CURSOR_ADAPTER_TYPE);
+        } else {
+            mMovieListAdapter.clear();
+            mGridView.setAdapter(mMovieListAdapter);
+            mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    // The getItem method returns a MovieCard type of Object.
+                    ((Callback) context)
+                            .onItemSelected(Intent.EXTRA_TEXT, mMovieListAdapter.getItem(position));
+                }
+            });
+            updateMoviesList(sortOrder);
+        }
+    }
 
-        private ArrayList<MovieCard> getMovieDataFromJson(String moviesJsonStr) throws JSONException {
-            final String TMDB_MOVIE_LIST = "results";
-            final String TMDB_POSTER_PATH = "poster_path";
-            final String TMDB_OVERVIEW = "overview";
-            final String TMDB_RELEASE_DATE = "release_date";
-            final String TMDB_TITLE = "original_title";
-            final String TMDB_USER_RATING = "vote_average";
-            final String TMDB_POSTER_BASE_URL = "http://image.tmdb.org/t/p/";
-            final String TMDB_POSTER_WIDTH = "w185";
+    private MovieCard cursorToMovieCard(Cursor cursor) {
+        int movieId = cursor.getInt(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_MOVIE_ID)
+        );
 
-            JSONObject moviesJson = new JSONObject(moviesJsonStr);
-            JSONArray moviesList = moviesJson.getJSONArray(TMDB_MOVIE_LIST);
+        byte isFavourite = 1;
 
-            ArrayList<MovieCard> movieCards = new ArrayList<MovieCard>();
+        String movieTitle = cursor.getString(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_TITLE)
+        );
 
-            for (int i = 0; i < moviesList.length(); i++) {
-                movieCards.add(new MovieCard(
-                                moviesList.getJSONObject(i).getString(TMDB_TITLE),
-                                moviesList.getJSONObject(i).getString(TMDB_RELEASE_DATE),
-                                TMDB_POSTER_BASE_URL + TMDB_POSTER_WIDTH + moviesList.getJSONObject(i).getString(TMDB_POSTER_PATH),
-                                moviesList.getJSONObject(i).getString(TMDB_OVERVIEW),
-                                Float.parseFloat(moviesList.getJSONObject(i).getString(TMDB_USER_RATING)))
-                );
-            }
-            return movieCards;
+        String movieReleaseDate = cursor.getString(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_RELEASE_DATE)
+        );
+
+        String moviePosterUrl = cursor.getString(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_POSTER)
+        );
+
+        String movieOverview = cursor.getString(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_SYNOPSIS)
+        );
+
+        float movieRating = cursor.getFloat(
+                cursor.getColumnIndex(MovieContract.FavouriteMoviesEntry.COLUMN_USER_RATING)
+        );
+
+        MovieCard movieCard = new MovieCard(
+                movieId, isFavourite, movieTitle, movieReleaseDate, moviePosterUrl, movieOverview, movieRating
+        );
+
+        return movieCard;
+    }
+
+    private void cursorGridView(final Context context, Uri favouriteMoviesUri) {
+        Cursor cursor = context.getContentResolver().query(
+                favouriteMoviesUri,
+                null,
+                null,
+                null,
+                null
+        );
+
+        if (cursor.moveToFirst()) {
+            mNoMoviesTextView.setText("");
+            mNoMoviesTextView.setVisibility(View.GONE);
+        } else {
+            mNoMoviesTextView.setVisibility(View.VISIBLE);
+            mNoMoviesTextView.setText(R.string.no_favourite_movie);
         }
 
-        @Override
-        protected ArrayList<MovieCard> doInBackground(Integer... params) {
+        FavouriteMovieCursorAdapter favouriteMovieCursorAdapter = new FavouriteMovieCursorAdapter(context, cursor, 0);
+        mGridView.setAdapter(favouriteMovieCursorAdapter);
+        mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Cursor cursor = (Cursor) parent.getItemAtPosition(position);
 
-            // These two need to be declared outside the try/catch
-            // so that they can be closed in the finally block.
-            HttpURLConnection urlConnection = null;
-            BufferedReader reader = null;
-
-            // Will contain the raw JSON response as a string.
-            String moviesJsonStr = null;
-
-            try {
-                // This is the url for v3 of The Movie DB API
-                final String URL_PROTOCOL = "http";
-                final String URL_HOSTNAME = "api.themoviedb.org";
-                final String API_VERSION = "3";
-                final String MOVIE_PATH = "movie";
-                final String SORT_PARAM = params[0] == 0 ? "popular" : "top_rated";
-                final String API_KEY = "api_key";
-
-                /* URL -> http://api.themoviedb.org/3/movie/popular */
-
-                /* URL -> http://api.themoviedb.org/3/movie/top_rated */
-
-                Uri.Builder tmdbUri = new Uri.Builder();
-                tmdbUri.scheme(URL_PROTOCOL)
-                        .authority(URL_HOSTNAME)
-                        .appendPath(API_VERSION)
-                        .appendPath(MOVIE_PATH)
-                        .appendPath(SORT_PARAM)
-                        .appendQueryParameter(API_KEY, BuildConfig.THE_MOVIE_DB_API_KEY);
-
-                URL urlFromUri = new URL(tmdbUri.build().toString());
-                Log.v("theMovieDatabase", urlFromUri.toString());
-
-                // Open Connection -> Set Request Type -> Connect
-                urlConnection = (HttpURLConnection) urlFromUri.openConnection();
-                urlConnection.setRequestMethod("GET");
-                urlConnection.connect();
-
-                // Read the Input Stream from the URL into a String
-                InputStream inputStream = urlConnection.getInputStream();
-                StringBuffer buffer = new StringBuffer();
-
-                if (inputStream == null) {
-                    // Nothing to do.
-                    return null;
+                MovieCard movieCard = null;
+                if (cursor != null) {
+                    movieCard = cursorToMovieCard(cursor);
                 }
 
-                reader = new BufferedReader(new InputStreamReader(inputStream));
-
-                String line;
-
-                while ((line = reader.readLine()) != null) {
-                    // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
-                    // But it does make debugging a *lot* easier if you print out the completed
-                    // buffer for debugging.
-                    buffer.append(line + "\n");
-                }
-
-                if (buffer.length() == 0) {
-                    // Stream was empty.  No point in parsing.
-                    return null;
-                }
-                moviesJsonStr = buffer.toString();
-            } catch (IOException e) {
-                Log.e(LOG_TAG, "Error ", e);
-                // If the code didn't successfully get the weather data, there's no point in attemping
-                // to parse it.
-            } finally {
-                if (urlConnection != null) {
-                    urlConnection.disconnect();
-                }
-
-                if (reader != null) {
-                    try {
-                        reader.close();
-                    } catch (final IOException e) {
-                        Log.e(LOG_TAG, "Error closing stream", e);
-                    }
-                }
+                ((Callback) context)
+                        .onItemSelected(Intent.EXTRA_TEXT, movieCard);
             }
-
-            try {
-                return getMovieDataFromJson(moviesJsonStr);
-            } catch (JSONException e) {
-                Log.e(LOG_TAG, e.getMessage(), e);
-                e.printStackTrace();
-            }
-
-            // This will only happen if there was an error getting or parsing the forecast.
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(ArrayList<MovieCard> movieCards) {
-            if (movieCards != null) {
-                savedMoviesList = new ArrayList<MovieCard>(movieCards);
-                movieListAdapter.clear();
-                movieListAdapter.addAll(movieCards);
-            }
-        }
+        });
     }
 }

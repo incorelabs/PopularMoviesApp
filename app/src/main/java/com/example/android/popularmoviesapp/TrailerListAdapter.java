@@ -5,22 +5,16 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.ImageView;
 import android.widget.TextView;
-
-import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 
-public class MovieListAdapter extends ArrayAdapter<MovieCard> {
-    private static final String LOG_TAG = MovieListAdapter.class.getSimpleName();
+public class TrailerListAdapter extends ArrayAdapter<TrailerCard> {
+    private static final String LOG_TAG = TrailerListAdapter.class.getSimpleName();
 
     // View lookup cache
     private static class ViewHolder {
-        TextView movieTitle;
-        TextView movieRating;
-        TextView movieReleaseYear;
-        ImageView moviePoster;
+        TextView trailerTitle;
     }
 
     /**
@@ -28,15 +22,15 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
      * The context is used to inflate the layout file, and the List is the data we want
      * to populate into the lists
      *
-     * @param context    The current context. Used to inflate the layout file.
-     * @param movieCards A List of AndroidFlavor objects to display in a list
+     * @param context      The current context. Used to inflate the layout file.
+     * @param trailerCards A List of TrailerCard objects to display in a list
      */
-    public MovieListAdapter(Context context, ArrayList<MovieCard> movieCards) {
+    public TrailerListAdapter(Context context, ArrayList<TrailerCard> trailerCards) {
         // Here, we initialize the ArrayAdapter's internal storage for the context and the list.
         // the second argument is used when the ArrayAdapter is populating a single TextView.
         // Because this is a custom adapter for two TextViews and an ImageView, the adapter is not
         // going to use this second argument, so it can be any value. Here, we used 0.
-        super(context, R.layout.list_movie_item, movieCards);
+        super(context, R.layout.list_trailer_item, trailerCards);
     }
 
     /**
@@ -50,8 +44,8 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
      */
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        // Gets the MovieCard object from the ArrayAdapter at the appropriate position
-        MovieCard movieCard = getItem(position);
+        // Gets the ReviewCard object from the ArrayAdapter at the appropriate position
+        TrailerCard trailerCard = getItem(position);
 
         // Check if an existing view is being reused, otherwise inflate the view
         ViewHolder viewHolder; // view lookup cache stored in tag
@@ -63,25 +57,15 @@ public class MovieListAdapter extends ArrayAdapter<MovieCard> {
         if (convertView == null) {
             viewHolder = new ViewHolder();
             LayoutInflater inflater = LayoutInflater.from(getContext());
-            convertView = inflater.inflate(R.layout.list_movie_item, parent, false);
-            viewHolder.movieTitle = (TextView) convertView.findViewById(R.id.list_movie_title);
-            viewHolder.movieRating = (TextView) convertView.findViewById(R.id.list_movie_rating);
-            viewHolder.movieReleaseYear = (TextView) convertView.findViewById(R.id.list_movie_year);
-            viewHolder.moviePoster = (ImageView) convertView.findViewById(R.id.list_movie_poster);
+            convertView = inflater.inflate(R.layout.list_trailer_item, parent, false);
+            viewHolder.trailerTitle = (TextView) convertView.findViewById(R.id.trailer_list_item_textview);
             convertView.setTag(viewHolder);
         } else {
             viewHolder = (ViewHolder) convertView.getTag();
         }
 
         // Populate the data into the template view using the data object
-        viewHolder.movieTitle.setText(movieCard.movieTitle);
-        viewHolder.movieRating.setText(Float.toString(movieCard.movieRating));
-        viewHolder.movieReleaseYear.setText(movieCard.movieReleaseDate.split("-")[0]);
-
-        Picasso.with(getContext())
-                .load(movieCard.moviePosterUrl)
-                .placeholder(android.R.drawable.sym_def_app_icon)
-                .into(viewHolder.moviePoster);
+        viewHolder.trailerTitle.setText(trailerCard.trailerTitle);
 
         // Return the completed view to render on screen
         return convertView;
