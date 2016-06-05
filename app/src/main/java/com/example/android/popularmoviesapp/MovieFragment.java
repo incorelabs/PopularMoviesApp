@@ -15,6 +15,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.GridView;
+import android.widget.TextView;
 
 import com.example.android.popularmoviesapp.data.MovieContract;
 
@@ -30,6 +31,7 @@ public class MovieFragment extends Fragment {
     protected static MovieListAdapter mMovieListAdapter;
     protected static GridView mGridView;
     protected static TransferData savedMoviesList;
+    protected static TextView mNoMoviesTextView;
 
     private static String mOutStateMovieListKey = "savedMoviesList";
     private static String mOutStateAdapterKey = "savedMoviesAdapter";
@@ -96,10 +98,20 @@ public class MovieFragment extends Fragment {
             isArrayAdapter = true;
         }
 
+        mNoMoviesTextView = (TextView) rootView.findViewById(R.id.no_movie_textview);
+
         mGridView = (GridView) rootView.findViewById(R.id.gridview_movie);
         mGridView.setDrawSelectorOnTop(true);
 
         if (isArrayAdapter) {
+            if (moviesList.size() > 0) {
+                mNoMoviesTextView.setText("");
+                mNoMoviesTextView.setVisibility(View.GONE);
+            } else {
+                mNoMoviesTextView.setVisibility(View.VISIBLE);
+                mNoMoviesTextView.setText(R.string.no_movie);
+            }
+
             mMovieListAdapter = new MovieListAdapter(getActivity(), moviesList);
 
             mGridView.setAdapter(mMovieListAdapter);
@@ -122,30 +134,7 @@ public class MovieFragment extends Fragment {
         if (savedMoviesList == null) {
             updateMoviesList(0);
         } else if (savedMoviesList != null && savedMoviesList.adapterType == TransferData.CURSOR_ADAPTER_TYPE) {
-            Cursor cursor = getContext().getContentResolver().query(
-                    (Uri) savedMoviesList.savedMoviesList,
-                    null,
-                    null,
-                    null,
-                    null
-            );
-
-            FavouriteMovieCursorAdapter favouriteMovieCursorAdapter = new FavouriteMovieCursorAdapter(getContext(), cursor, 0);
-            mGridView.setAdapter(favouriteMovieCursorAdapter);
-            mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    Cursor cursor = (Cursor) parent.getItemAtPosition(position);
-
-                    MovieCard movieCard = null;
-                    if (cursor != null) {
-                        movieCard = cursorToMovieCard(cursor);
-                    }
-
-                    ((Callback) getContext())
-                            .onItemSelected(Intent.EXTRA_TEXT, movieCard);
-                }
-            });
+            cursorGridView(getContext(), (Uri) savedMoviesList.savedMoviesList);
         }
     }
 
@@ -171,32 +160,7 @@ public class MovieFragment extends Fragment {
     public void switchGridViewAdapter(final Context context, boolean isCursorAdapter, int sortOrder) {
         if (isCursorAdapter) {
             Uri favouriteMoviesUri = MovieContract.FavouriteMoviesEntry.buildFavouriteMoviesCollection();
-
-            Cursor cursor = context.getContentResolver().query(
-                    favouriteMoviesUri,
-                    null,
-                    null,
-                    null,
-                    null
-            );
-
-            FavouriteMovieCursorAdapter favouriteMovieCursorAdapter = new FavouriteMovieCursorAdapter(context, cursor, 0);
-            mGridView.setAdapter(favouriteMovieCursorAdapter);
-            mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    Cursor cursor = (Cursor) parent.getItemAtPosition(position);
-
-                    MovieCard movieCard = null;
-                    if (cursor != null) {
-                        movieCard = cursorToMovieCard(cursor);
-                    }
-
-                    ((Callback) context)
-                            .onItemSelected(Intent.EXTRA_TEXT, movieCard);
-                }
-            });
-
+            cursorGridView(context, favouriteMoviesUri);
             savedMoviesList = new TransferData(favouriteMoviesUri, TransferData.CURSOR_ADAPTER_TYPE);
         } else {
             mMovieListAdapter.clear();
@@ -245,5 +209,40 @@ public class MovieFragment extends Fragment {
         );
 
         return movieCard;
+    }
+
+    private void cursorGridView(final Context context, Uri favouriteMoviesUri) {
+        Cursor cursor = context.getContentResolver().query(
+                favouriteMoviesUri,
+                null,
+                null,
+                null,
+                null
+        );
+
+        if (cursor.moveToFirst()) {
+            mNoMoviesTextView.setText("");
+            mNoMoviesTextView.setVisibility(View.GONE);
+        } else {
+            mNoMoviesTextView.setVisibility(View.VISIBLE);
+            mNoMoviesTextView.setText(R.string.no_favourite_movie);
+        }
+
+        FavouriteMovieCursorAdapter favouriteMovieCursorAdapter = new FavouriteMovieCursorAdapter(context, cursor, 0);
+        mGridView.setAdapter(favouriteMovieCursorAdapter);
+        mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Cursor cursor = (Cursor) parent.getItemAtPosition(position);
+
+                MovieCard movieCard = null;
+                if (cursor != null) {
+                    movieCard = cursorToMovieCard(cursor);
+                }
+
+                ((Callback) context)
+                        .onItemSelected(Intent.EXTRA_TEXT, movieCard);
+            }
+        });
     }
 }

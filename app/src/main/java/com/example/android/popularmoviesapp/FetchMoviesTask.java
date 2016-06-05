@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
+import android.view.View;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -157,9 +158,14 @@ public class FetchMoviesTask extends AsyncTask<Integer, Void, ArrayList<MovieCar
     @Override
     protected void onPostExecute(ArrayList<MovieCard> movieCards) {
         if (movieCards != null) {
-            MovieFragment.savedMoviesList = new TransferData(movieCards, TransferData.ARRAY_ADAPTER_TYPE);
+            MovieFragment.mNoMoviesTextView.setText("");
+            MovieFragment.mNoMoviesTextView.setVisibility(View.GONE);
             MovieFragment.mMovieListAdapter.clear();
             MovieFragment.mMovieListAdapter.addAll(movieCards);
+        } else {
+            MovieFragment.mNoMoviesTextView.setVisibility(View.VISIBLE);
+            MovieFragment.mNoMoviesTextView.setText(R.string.no_movie);
         }
+        MovieFragment.savedMoviesList = new TransferData(movieCards, TransferData.ARRAY_ADAPTER_TYPE);
     }
 }

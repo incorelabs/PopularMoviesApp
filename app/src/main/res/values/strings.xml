@@ -4,4 +4,6 @@
     <string name="action_refresh">Refresh</string>
     <string name="title_activity_detail">Details</string>
     <string name="label_overview">Plot Synopsis :</string>
+    <string name="no_movie">No movies available. \n\n Press Refresh to fetch some!</string>
+    <string name="no_favourite_movie">No favourites available. \n\n Add some by pressing the STAR!</string>
 </resources>
